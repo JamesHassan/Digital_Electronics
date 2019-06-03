@@ -24,7 +24,10 @@ void app_main()
   {
     vTaskDelay(200 / portTICK_RATE_MS);
     printf("Hello World");
+    vTaskDelay(200 / portTICK_RATE_MS);
+    printf("This is me!");
+
   }
-  
+
 
 }
