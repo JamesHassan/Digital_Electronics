@@ -35,5 +35,6 @@ void adc_read_task(void* arg);
 // void save_data(void* arg);
 void save_data(uint32_t Average);
 
+void display_data();
 
 #endif

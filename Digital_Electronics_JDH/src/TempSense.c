@@ -4,22 +4,19 @@
   @date 2019-06-20
 */
 
-// #define I2S_ADC_UNIT ADC_UNIT_1
-// #define I2S_ADC_CHANNEL ADC1_CHANNEL_0
 #include "TempSense.h"
 
 #define AddressStart 0xEF401000
 #define AddressEnd 0xEF7FFFFF
 
-#define MAX_SECTOR_NUM 8
-#define MAX_BLOCK_NUM 128
+#define MAX_SECTOR_NUM 7
+#define MAX_BLOCK_NUM 127
+
+nvs_handle my_handle;
+
 
 spi_flash_mmap_memory_t memory;
 spi_flash_mmap_handle_t mmapHandle;
-
-//Address location: 8388608
-// static uint32_t WriteBuff[SPI_FLASH_SEC_SIZE / 4];
-// static uint32_t ReadBuff[SPI_FLASH_SEC_SIZE / 4];
 
 void adc_read_task(void* arg)
 {
@@ -43,7 +40,7 @@ void adc_read_task(void* arg)
     if (voltage < lowest)
     {
       lowest = voltage;
-      printf("Lowest: %dmV\n", lowest);
+      // printf("Lowest: %dmV\n", lowest);
 
     }
     if (voltage > highest)
@@ -72,51 +69,7 @@ void adc_read_task(void* arg)
 // void save_data(void* arg)
 void save_data(uint32_t Average)
 {
-/*
-  // if(xQueueReceive(data_queue, &arg, portMAX_DELAY))
-  // {
-    // uint32_t Average = (uint32_t)&arg; 
-    uint32_t Average = arg; 
-
-    // uint32_t AddressCurrent = AddressStart;
-    // uint32_t AddressCurrent[1024];
-    // AddressCurrent[0] = AddressStart;
-    // uint32_t base_addr = 0x200000;
-
-    uint32_t curAddr = AddressStart;
-    uint32_t srcAddr = 0xEF400000;
-    spi_flash_op_block_func;
-    esp_ipc_call;
-  
-    uint32_t free_mem = spi_flash_mmap_get_free_pages(memory);
-    printf("Free Pages: %d\n", free_mem);
-    ESP_ERROR_CHECK(spi_flash_mmap(srcAddr, sizeof(srcAddr), memory,curAddr, &mmapHandle));
-
-    // The location of the address of the data is stored in 0x3F80_000 = 8388608
-    // ESP_ERROR_CHECK(spi_flash_read(srcAddr, &curAddr,sizeof(curAddr)));
-    // ESP_ERROR_CHECK(spi_flash_read(srcAddr, AddressCurrent,sizeof(AddressCurrent)));
-    //spi_flash_read(base_addr, AddressCurrent,sizeof(AddressCurrent));
-    // Advance the memory location pointer
-    if (curAddr != AddressEnd)  //(AddressCurrent[0] != AddressEnd) || (base_addr != 0x300000))
-    {
-      curAddr += SPI_FLASH_SEC_SIZE;
-    }
-    else
-    {
-      curAddr = 0x3F400000 + SPI_FLASH_SEC_SIZE;
-    }
-    // printf("Adress: %d\n",AddressCurrent[0]);
-    printf("Base Adress: %d\n",curAddr);
-
-    // ESP_ERROR_CHECK(spi_flash_write(curAddr,&Average,sizeof(Average)));
-    // ESP_ERROR_CHECK(spi_flash_read(srcAddr, &curAddr,sizeof(curAddr)));
-
-}*/
-// }
-
-
   int err;
-  nvs_handle my_handle;
   err = nvs_open("storage", NVS_READWRITE, &my_handle);
   if (err != ESP_OK) 
   {
@@ -124,97 +77,122 @@ void save_data(uint32_t Average)
   }
   else 
   {
-    printf("Done\n");
-
-    // Read
-    printf("Reading restart counter from NVS ... ");
     uint32_t currAddr = 0;
-
-    // sector
-
     uint32_t baseAddr = 0;
     char baseStr[32];
     // convert address space to string
     itoa(baseAddr, baseStr, 10);
-
-    // uint32_t memoryOut = atoi(baseStr);
-    
-    err = nvs_set_u32(my_handle,baseStr, &currAddr);
-
-
     err = nvs_get_u32(my_handle,baseStr, &currAddr);
-    uint32_t memoryLoc = currAddr;
+
     uint32_t tempMem = currAddr;
     
     int sector = tempMem & 0b11111111;
-    int block = (memoryLoc & 0b1111111100000000) >> 8 ;
-    printf("block: %d\n", block);
-    printf("sector: %d\n", sector);
+    tempMem = currAddr;
+    int block = (tempMem & 0b1111111100000000) >> 8 ;
+    // printf("block: %d\n", block);
+    // printf("sector: %d\n", sector);
 
     if(sector < MAX_SECTOR_NUM)
     {
       sector++;
     }
-    else if (sector == MAX_SECTOR_NUM)
+    else
     {
       sector = 0;
       block++;
     }
-    if (block == MAX_BLOCK_NUM)
+    if ((sector == MAX_SECTOR_NUM) && (block == MAX_BLOCK_NUM))
+    {
       block = 0;
-
-    memoryLoc = (block << 8) + sector;
-    printf("\n");
-    printf("block: %d\n", block);
-    printf("sector: %d\n", sector);
-    printf("memoryLoc: %d\n", memoryLoc);
+      sector = 0;
+    }
+    currAddr = (block << 8) + sector;
+    // printf("\n");
+    // printf("block: %d\n", block);
+    // printf("sector: %d\n", sector);
+    // printf("tempMem: %d\n", currAddr);
+    // tempMem = currAddr;
 
     char memStr[32];
-    itoa(memoryLoc, memStr, 10);
+    itoa(currAddr, memStr, 10);
 
-    err = nvs_set_u32(my_handle,memStr, &Average);
-    printf((err != ESP_OK) ? "Data Failed!\n" : "Done\n");
+    err = nvs_set_u32(my_handle,memStr, Average);
+    printf((err != ESP_OK) ? "Data Failed!\n" : "Data Set!\n");
 
-    err = nvs_set_u32(my_handle,baseStr, &currAddr);
-    printf((err != ESP_OK) ? "Memory Location Failed!\n" : "Done\n");
+    err = nvs_set_u32(my_handle,baseStr, currAddr);
+    printf((err != ESP_OK) ? "Memory Location Failed!\n" : "Memory Location Set!\n");
 
-    printf("Location of Memory: %d\n", memoryLoc);
+    // printf("Location of Memory: %d\n", currAddr);
     printf("Data: %d\n", Average);
-
-
-/* 
-    switch (err) 
-    {
-      case ESP_OK:
-        printf("Done\n");
-        printf("Restart counter = %d\n", currAddr);
-        break;
-      case ESP_ERR_NVS_NOT_FOUND:
-        printf("The value is not initialized yet!\n");
-        break;
-      default :
-        printf("Error (%s) reading!\n", esp_err_to_name(err));
-    }
-
-
-    // Write
-    printf("Updating restart counter in NVS ... ");
-    // currAddr++;
-    err = nvs_set_u32(my_handle, baseStr, currAddr);
-
-    printf((err != ESP_OK) ? "Failed!\n" : "Done\n");
-*/
-
-    // Commit written value.
-    // After setting any values, nvs_commit() must be called to ensure changes are written
-    // to flash storage. Implementations may write to storage at other times,
-    // but this is not guaranteed.
     printf("Committing updates in NVS ... ");
     err = nvs_commit(my_handle);
     printf((err != ESP_OK) ? "Failed!\n" : "Done\n");
-
     // Close
     nvs_close(my_handle);
   }
-
 }
+
+void display_data()
+{
+  int err;
+  err = nvs_open("storage", NVS_READONLY, &my_handle);
+  if (err != ESP_OK)
+    {
+      printf("Error Opening Handle\n");
+    }
+  else
+  {
+    // get the maxiumum address value for the print out of the data
+    uint32_t baseAddr = 0;
+    char baseStr[32];
+    itoa(baseAddr, baseStr, 10);
+
+    uint32_t maxAddress;
+    nvs_get_u32(my_handle,baseStr,&maxAddress);
+    uint32_t tempAddr = maxAddress >> 8;
+    maxAddress = tempAddr + (maxAddress * 0b11111111);
+    printf("Max Address: %d\n",maxAddress);
+    uint32_t tempOut;
+    uint32_t currAddr = 1;
+    char currAddrStr[32];
+
+    for (uint32_t i = 0; i < maxAddress;i++)
+    {
+      itoa(currAddr, currAddrStr, 10);
+      err = nvs_get_u32(my_handle,currAddrStr,&tempOut);
+      if (err != ESP_OK)
+      {
+        i = maxAddress;
+      }
+      else
+      {
+        // Find the next Address to print
+        uint32_t tempMem = currAddr;
+
+        int sector = tempMem & 0b11111111;
+        tempMem = currAddr;
+        int block = (tempMem & 0b1111111100000000) >> 8 ;
+        // printf("block: %d\n", block);
+        // printf("sector: %d\n", sector);
+        if(sector < MAX_SECTOR_NUM)
+        {
+          sector++;
+        }
+        else
+        {
+          sector = 0;
+          block++;
+        }
+        if ((sector == MAX_SECTOR_NUM) && (block == MAX_BLOCK_NUM))
+        {
+          i = maxAddress;
+        }
+        currAddr = (block << 8) + sector;
+      
+        printf("Minute %d: %d\n",i,tempOut);
+      }
+    }
+    nvs_close(my_handle);
+  }
+}
+
