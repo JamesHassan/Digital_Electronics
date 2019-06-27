@@ -52,6 +52,9 @@ static void setup()
 {
   timer_queue = xQueueCreate(10, sizeof(timers_t));
   Timer_Init(timer00);
+  uint32_t temp;
+  data_queue = xQueueCreate(10, sizeof(temp));
+
 
     // Initialize NVS
     esp_err_t err = nvs_flash_init();
@@ -69,8 +72,8 @@ void app_main()
 {
   setup();
 
-  // xTaskCreate(adc_read_task, "ADC read task", 2048, NULL, 5, NULL);    
   xTaskCreate(timer0_evt,"timer0_evt", 2048, NULL, 5, NULL);
+  // xTaskCreate(save_data, "save_data task", 2048, NULL, 5, NULL);    
 
   // for(;;)
   // {

@@ -11,6 +11,8 @@
         "timer.h": "c",
         "locale.h": "c",
         "nvs_flash.h": "c",
-        "nvs.h": "c"
+        "nvs.h": "c",
+        "string.h": "c",
+        "string": "c"
     }
 }

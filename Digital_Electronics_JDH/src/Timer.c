@@ -71,13 +71,6 @@ void timer0_evt(void *arg)
 
     if (xQueueReceive(timer_queue, &tempTimer, portMAX_DELAY))
     {
-      // /* Print which timer and their values */
-      // printf("---- Timer Event ----\n");
-      // printf("Group[%d], timer[%d]\n", tempTimer.timer_group, tempTimer.timer_num);
-      // uint64_t task_counter_value;
-      // timer_get_counter_value(tempTimer.timer_group, tempTimer.timer_num, &task_counter_value);
-      // printf("%d\n",(int)task_counter_value);
-
       if (tempTimer.timer_num == 0)
       {
         // Read ADC
@@ -85,14 +78,7 @@ void timer0_evt(void *arg)
       }
       else if (tempTimer.timer_num == 1)
       {
-        /*
-        // For checking jitter
-        int level = gpio_get_level(GPIO_NUM_16);
-        if (level)
-            gpio_set_level(GPIO_NUM_16, 0);
-        else
-            gpio_set_level(GPIO_NUM_16, 1);
-        */
+
       }
     }
   }
