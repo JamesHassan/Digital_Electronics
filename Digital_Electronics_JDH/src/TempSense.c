@@ -72,15 +72,14 @@ static inline bool error_check(int err, char messFail[80], char messSuccess[80])
 
   if (err != ESP_OK)
   {
-    ESP_ERROR_CHECK(err);
     printf(messFail);
     if (err == ESP_ERR_NVS_NOT_ENOUGH_SPACE)
       nvs_erase_all(my_handle);
+    ESP_ERROR_CHECK(err);
     return false;
   }
   else
     return true;
-  
 }
 // void save_data(void* arg)
 void save_data(uint32_t Average)
@@ -95,7 +94,8 @@ void save_data(uint32_t Average)
     // convert address space to string
     itoa(baseAddr, baseStr, 10);
     err = nvs_get_u32(my_handle,baseStr, &currAddr);
-  
+    error_check(err, "Current Address Retrival Failed!\n","");
+
     if (currAddr < MAX_ADDRESS)
       currAddr++;
     else
@@ -135,12 +135,16 @@ void display_data()
 {
   while(1)
   {
-  char str [80];
+  char str [80] = "";
   char desired [9] = "Download";
-  // printf("GOT HERE!");
-  scanf("If you'd like to see the last 12 hours of data, Please enter: 'Download': %s\n",str);
+  printf("Please enter: 'Download': \n");
+  scanf("%s",str); //If you'd like to see the last 12 hours of data,  
+  vTaskDelay(5000 / portTICK_RATE_MS);
+
+  printf("%s\n",str);
   if (strcmp(str,desired) == 0)
   {
+    printf("SUccess!!!\n");
     int err;
     err = nvs_open("read", NVS_READONLY, &my_handle);
     if(error_check(err, "Error (%s) opening NVS handle!\n","Sucess!\n"))
