@@ -32,8 +32,6 @@
 #include "nvs_flash.h"
 #include "nvs.h"
 
-#include <string.h>
-
 // 60 second timer
 timers_t timer00 = 
 {
@@ -75,16 +73,5 @@ void app_main()
   setup();
 
   xTaskCreate(timer0_evt,"timer0_evt", 2048, NULL, 5, NULL);
-  // xTaskCreate(save_data, "save_data task", 2048, NULL, 5, NULL);    
-  char str [80];
-  char desired [9] = "Download";
-  for(;;)
-  {
-    vTaskDelay(200 / portTICK_RATE_MS);
-    scanf("If you'd like to see some data, Please enter: 'Download': %s",str);
-    if (strcmp(str,desired) == 0)
-    {
-      display_data();
-    }
-  }
+  xTaskCreate(display_data, "display_data", 2048, NULL, 5, NULL);    
 }

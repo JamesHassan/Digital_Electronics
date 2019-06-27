@@ -12,8 +12,9 @@
 #define MAX_SECTOR_NUM 7
 #define MAX_BLOCK_NUM 127
 
-nvs_handle my_handle;
+#define MAX_ADDRESS 720 // FOR 12 HOUR WRAP AROUND
 
+nvs_handle my_handle;
 
 spi_flash_mmap_memory_t memory;
 spi_flash_mmap_handle_t mmapHandle;
@@ -65,17 +66,28 @@ void adc_read_task(void* arg)
   // xQueueSendFromISR(data_queue, &temperatureAve, NULL);
 
 }
+static inline bool error_check(int err, char messFail[80], char messSuccess[80])
+{
+  printf((err != ESP_OK) ? messFail : messSuccess);
 
+  if (err != ESP_OK)
+  {
+    ESP_ERROR_CHECK(err);
+    printf(messFail);
+    if (err == ESP_ERR_NVS_NOT_ENOUGH_SPACE)
+      nvs_erase_all(my_handle);
+    return false;
+  }
+  else
+    return true;
+  
+}
 // void save_data(void* arg)
 void save_data(uint32_t Average)
 {
   int err;
   err = nvs_open("storage", NVS_READWRITE, &my_handle);
-  if (err != ESP_OK) 
-  {
-    printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
-  }
-  else 
+  if(error_check(err, "Error (%s) opening NVS handle!\n","Sucess!\n"))
   {
     uint32_t currAddr = 0;
     uint32_t baseAddr = 0;
@@ -83,116 +95,84 @@ void save_data(uint32_t Average)
     // convert address space to string
     itoa(baseAddr, baseStr, 10);
     err = nvs_get_u32(my_handle,baseStr, &currAddr);
-
-    uint32_t tempMem = currAddr;
-    
-    int sector = tempMem & 0b11111111;
-    tempMem = currAddr;
-    int block = (tempMem & 0b1111111100000000) >> 8 ;
-    // printf("block: %d\n", block);
-    // printf("sector: %d\n", sector);
-
-    if(sector < MAX_SECTOR_NUM)
-    {
-      sector++;
-    }
+  
+    if (currAddr < MAX_ADDRESS)
+      currAddr++;
     else
-    {
-      sector = 0;
-      block++;
-    }
-    if ((sector == MAX_SECTOR_NUM) && (block == MAX_BLOCK_NUM))
-    {
-      block = 0;
-      sector = 0;
-    }
-    currAddr = (block << 8) + sector;
-    // printf("\n");
-    // printf("block: %d\n", block);
-    // printf("sector: %d\n", sector);
-    // printf("tempMem: %d\n", currAddr);
-    // tempMem = currAddr;
+      currAddr = 1;
 
     char memStr[32];
     itoa(currAddr, memStr, 10);
 
-    err = nvs_set_u32(my_handle,memStr, Average);
-    printf((err != ESP_OK) ? "Data Failed!\n" : "Data Set!\n");
-
     err = nvs_set_u32(my_handle,baseStr, currAddr);
-    printf((err != ESP_OK) ? "Memory Location Failed!\n" : "Memory Location Set!\n");
+    error_check(err, "Memory Location Failed!\n","Memory Location Set!\n");
 
+    uint32_t timeCode = currAddr << 16;
+    uint32_t data = timeCode + Average;
+
+    err = nvs_set_u32(my_handle,memStr, data);
+    error_check(err, "Data Failed!\n","Data Set!\n");
+
+    // uint32_t temp = data;
+    // uint32_t hour = (temp >> 16)/60;//(tempAddr/60) << 24;
+    // temp = data;
+    // uint32_t minute = (temp >> 16)%60;
+    // uint32_t Average = temp & 0b1111111111111111;
+    // printf("Hour: %d, Minute: %d, Average Temperature: %d\n", hour, minute, Average);
     // printf("Location of Memory: %d\n", currAddr);
-    printf("Data: %d\n", Average);
+
+    printf("Data: %d\n", data);
     printf("Committing updates in NVS ... ");
     err = nvs_commit(my_handle);
     printf((err != ESP_OK) ? "Failed!\n" : "Done\n");
     // Close
     nvs_close(my_handle);
+    // display_data();
   }
 }
 
 void display_data()
 {
-  int err;
-  err = nvs_open("storage", NVS_READONLY, &my_handle);
-  if (err != ESP_OK)
-    {
-      printf("Error Opening Handle\n");
-    }
-  else
+  while(1)
   {
-    // get the maxiumum address value for the print out of the data
-    uint32_t baseAddr = 0;
-    char baseStr[32];
-    itoa(baseAddr, baseStr, 10);
-
-    uint32_t maxAddress;
-    nvs_get_u32(my_handle,baseStr,&maxAddress);
-    uint32_t tempAddr = maxAddress >> 8;
-    maxAddress = tempAddr + (maxAddress * 0b11111111);
-    printf("Max Address: %d\n",maxAddress);
-    uint32_t tempOut;
-    uint32_t currAddr = 1;
-    char currAddrStr[32];
-
-    for (uint32_t i = 0; i < maxAddress;i++)
+  char str [80];
+  char desired [9] = "Download";
+  // printf("GOT HERE!");
+  scanf("If you'd like to see the last 12 hours of data, Please enter: 'Download': %s\n",str);
+  if (strcmp(str,desired) == 0)
+  {
+    int err;
+    err = nvs_open("read", NVS_READONLY, &my_handle);
+    if(error_check(err, "Error (%s) opening NVS handle!\n","Sucess!\n"))
     {
-      itoa(currAddr, currAddrStr, 10);
-      err = nvs_get_u32(my_handle,currAddrStr,&tempOut);
-      if (err != ESP_OK)
-      {
-        i = maxAddress;
-      }
-      else
-      {
-        // Find the next Address to print
-        uint32_t tempMem = currAddr;
+      // get the maxiumum address value for the print out of the data
+      uint32_t baseAddr = 0;
+      char baseStr[32];
+      itoa(baseAddr, baseStr, 10);
+      uint32_t tempOut;
+      uint32_t currAddr = 1;
+      char currAddrStr[32];
+      uint32_t hour;
+      uint32_t minute;
+      uint32_t Average;
 
-        int sector = tempMem & 0b11111111;
-        tempMem = currAddr;
-        int block = (tempMem & 0b1111111100000000) >> 8 ;
-        // printf("block: %d\n", block);
-        // printf("sector: %d\n", sector);
-        if(sector < MAX_SECTOR_NUM)
+      for (uint32_t i = 0; i < MAX_ADDRESS;i++)
+      {
+        itoa(currAddr, currAddrStr, 10);
+        err = nvs_get_u32(my_handle,currAddrStr,&tempOut);
+        if(error_check(err, "Data Retrieval Failed!\n",""))
         {
-          sector++;
+          uint32_t temp = tempOut;
+          hour = (temp >> 16)/60;//(tempAddr/60) << 24;
+          temp = tempOut;
+          minute = (temp >> 16)%60;
+          Average = tempOut & 0b1111111111111111;
+          double avg = ((double)Average)/100;
+          printf("Hour: %d, Minute: %d, Average Temperature: %.2f*C\n", hour, minute, avg);
         }
-        else
-        {
-          sector = 0;
-          block++;
-        }
-        if ((sector == MAX_SECTOR_NUM) && (block == MAX_BLOCK_NUM))
-        {
-          i = maxAddress;
-        }
-        currAddr = (block << 8) + sector;
-      
-        printf("Minute %d: %d\n",i,tempOut);
       }
+      nvs_close(my_handle);
     }
-    nvs_close(my_handle);
   }
 }
-
+}

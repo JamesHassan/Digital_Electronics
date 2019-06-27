@@ -23,6 +23,8 @@
 #include "nvs_flash.h"
 #include "nvs.h"
 
+#include <string.h>
+
 #define I2S_ADC_UNIT ADC_UNIT_1
 #define I2S_ADC_CHANNEL ADC1_CHANNEL_0
 
@@ -31,8 +33,6 @@ xQueueHandle data_queue;
 //Comments
 void adc_read_task(void* arg);
 
-// Comments
-// void save_data(void* arg);
 void save_data(uint32_t Average);
 
 void display_data();
