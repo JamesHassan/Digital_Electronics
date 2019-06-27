@@ -28,8 +28,9 @@
 #include "driver/gpio.h"
 #include "Timer.h"
 #include "TempSense.h"
-
-#include "locale.h"
+// Flash memory
+#include "nvs_flash.h"
+#include "nvs.h"
 
 // 60 second timer
 timers_t timer00 = 
@@ -51,8 +52,16 @@ static void setup()
 {
   timer_queue = xQueueCreate(10, sizeof(timers_t));
   Timer_Init(timer00);
-  setlocale(LC_ALL, "");
 
+    // Initialize NVS
+    esp_err_t err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        // NVS partition was truncated and needs to be erased
+        // Retry nvs_flash_init
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        err = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(err);
 
 }
 

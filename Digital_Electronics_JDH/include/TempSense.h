@@ -17,11 +17,18 @@
 #include "driver/adc.h"
 #include "esp_adc_cal.h"
 #include "driver/gpio.h"
-#include "locale.h"
+#include "esp_spi_flash.h"
+#include "rom/spi_flash.h"
+
+#include "nvs_flash.h"
+#include "nvs.h"
 
 #define I2S_ADC_UNIT ADC_UNIT_1
 #define I2S_ADC_CHANNEL ADC1_CHANNEL_0
+// Comments
+static void save_data(uint32_t Average);
 
+//Comments
 void adc_read_task(void* arg);
 
 #endif
