@@ -92,6 +92,7 @@ void save_data(uint32_t Average)
     // convert address space to string
     itoa(baseAddr, baseStr, 10);
     err = nvs_get_u32(my_handle,baseStr, &currAddr);
+
     // printf("Base Address: %d\n",baseAddr);
     // printf("Current Address: %d\n",currAddr);
     error_check(err, "Current Address Retrival Failed!\n","");
@@ -152,19 +153,20 @@ void display_data()
     {
       uint32_t tempOut;
       // get the maxiumum address value for the print out of the data
-      // uint32_t baseAddr = 0;
-      // char baseStr[32];
-      // itoa(baseAddr, baseStr, 10);
-      // err = nvs_get_u32(my_handle,baseStr,&tempOut);
-      // if(error_check(err, "Data Retrieval Failed!\n",""))
-      // {}
+      uint32_t baseAddr = 0;
+      char baseStr[32];
+      uint32_t latestData;
+      itoa(baseAddr, baseStr, 10);
+      err = nvs_get_u32(my_handle,baseStr,&latestData);
+      if(error_check(err, "Data Retrieval Failed!\n",""))
+      {}
       // uint32_t currAddr = 1;
       char currAddrStr[32];
       uint32_t hour;
       uint32_t minute;
       uint32_t Average;
 
-      for (uint32_t i = 0; i < MAX_ADDRESS;i++)
+      for (uint32_t i = 1; i <= latestData;i++)
       {
         itoa(i, currAddrStr, 10);
         err = nvs_get_u32(my_handle,currAddrStr,&tempOut);
@@ -183,9 +185,7 @@ void display_data()
         else
         {
           printf("No data or Failed\n");
-          i = MAX_ADDRESS;
         }
-
       }
       nvs_close(my_handle);
     }
