@@ -1,7 +1,7 @@
 /*
-   @brief the main module for the PAV project.
-   @author James Hassan 11991559
-   @date 2019-06-04
+  @brief the main module for the Digital Electronics project.
+  @author James Hassan 11991559
+  @date 2019-06-04
 */
 
 #include <stdio.h>
@@ -54,17 +54,16 @@ static void setup()
   Timer_Init(timer00);
   uint32_t temp;
   data_queue = xQueueCreate(10, sizeof(temp));
-
-
-    // Initialize NVS
-    esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        // NVS partition was truncated and needs to be erased
-        // Retry nvs_flash_init
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        err = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(err);
+  // Initialize NVS
+  esp_err_t err = nvs_flash_init();
+  if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) 
+  {
+    // NVS partition was truncated and needs to be erased
+    // Retry nvs_flash_init
+    ESP_ERROR_CHECK(nvs_flash_erase());
+    err = nvs_flash_init();
+  }
+  ESP_ERROR_CHECK(err);
 
 }
 

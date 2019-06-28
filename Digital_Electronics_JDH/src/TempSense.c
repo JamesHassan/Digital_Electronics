@@ -1,16 +1,10 @@
 /*
-  @brief Reads the ADC
+  @brief Reads the ADC, calculates temperatures, saves data to Non-Volitile Storage, and prints out all data
   @author James Hassan 11991559
   @date 2019-06-20
 */
 
 #include "TempSense.h"
-
-#define AddressStart 0xEF401000
-#define AddressEnd 0xEF7FFFFF
-
-#define MAX_SECTOR_NUM 7
-#define MAX_BLOCK_NUM 127
 
 #define MAX_ADDRESS 720 // FOR 12 HOUR WRAP AROUND
 
@@ -137,61 +131,61 @@ void display_data()
 {
   while(1)
   {
-  char str [80] = "";
-  char desired [9] = "Download";
-  printf("To see some data, please enter: 'Download': ");
-  scanf("%s",str); //If you'd like to see the last 12 hours of data, 
-  printf("%s\n",str); 
-  vTaskDelay(10000 / portTICK_RATE_MS);
-  printf("%s\n",str);
-  if ((strcmp(str,desired) == 0) || (strcmp(str,"Download\n") == 0) || (strcmp(str,"Download\r\n") == 0))
-  {
-    printf("SUccess!!!\n");
-    int err;
-    err = nvs_open("storage", NVS_READWRITE, &my_handle);
-    if(error_check(err, "Error (%s) opening NVS handle!\n","Download Sucess!\n"))
+    char str [80] = "";
+    char desired [9] = "Download";
+    printf("To see some data, please enter: 'Download': ");
+    scanf("%s",str); //If you'd like to see the last 12 hours of data, 
+    printf("%s\n",str); 
+    vTaskDelay(10000 / portTICK_RATE_MS);
+    printf("%s\n",str);
+    if ((strcmp(str,desired) == 0) || (strcmp(str,"Download\n") == 0) || (strcmp(str,"Download\r\n") == 0))
     {
-      uint32_t tempOut;
-      // get the maxiumum address value for the print out of the data
-      uint32_t baseAddr = 0;
-      char baseStr[32];
-      uint32_t latestData;
-      itoa(baseAddr, baseStr, 10);
-      err = nvs_get_u32(my_handle,baseStr,&latestData);
-      if(error_check(err, "Data Retrieval Failed!\n",""))
-      {}
-      // uint32_t currAddr = 1;
-      char currAddrStr[32];
-      uint32_t hour;
-      uint32_t minute;
-      uint32_t Average;
-
-      for (uint32_t i = 1; i <= latestData;i++)
+      printf("SUccess!!!\n");
+      int err;
+      err = nvs_open("storage", NVS_READWRITE, &my_handle);
+      if(error_check(err, "Error (%s) opening NVS handle!\n","Download Sucess!\n"))
       {
-        itoa(i, currAddrStr, 10);
-        err = nvs_get_u32(my_handle,currAddrStr,&tempOut);
-        uint32_t temp = tempOut;
-        hour = (temp >> 16)/60;//(tempAddr/60) << 24;
-        temp = tempOut;
-        minute = (temp >> 16)%60;
-        printf("Hour: %d, Minute: %d, ", hour, minute);
+        uint32_t tempOut;
+        // get the maxiumum address value for the print out of the data
+        uint32_t baseAddr = 0;
+        char baseStr[32];
+        uint32_t latestData;
+        itoa(baseAddr, baseStr, 10);
+        err = nvs_get_u32(my_handle,baseStr,&latestData);
+        if(error_check(err, "Data Retrieval Failed!\n",""))
+        {}
+        // uint32_t currAddr = 1;
+        char currAddrStr[32];
+        uint32_t hour;
+        uint32_t minute;
+        uint32_t Average;
 
-        if(error_check(err, "",""))
+        for (uint32_t i = 1; i <= latestData;i++)
         {
-          Average = tempOut & 0b1111111111111111;
-          double avg = ((double)Average)/100;
-          printf("Average Temperature: %.2f*C\n",avg);
+          itoa(i, currAddrStr, 10);
+          err = nvs_get_u32(my_handle,currAddrStr,&tempOut);
+          uint32_t temp = tempOut;
+          hour = (temp >> 16)/60;//(tempAddr/60) << 24;
+          temp = tempOut;
+          minute = (temp >> 16)%60;
+          printf("Hour: %d, Minute: %d, ", hour, minute);
+
+          if(error_check(err, "",""))
+          {
+            Average = tempOut & 0b1111111111111111;
+            double avg = ((double)Average)/100;
+            printf("Average Temperature: %.2f*C\n",avg);
+          }
+          else
+          {
+            printf("No data or Failed\n");
+          }
         }
-        else
-        {
-          printf("No data or Failed\n");
-        }
+        nvs_close(my_handle);
       }
-      nvs_close(my_handle);
     }
+    else if (strcmp(str,"") == 0){}
+    else
+      printf("Incorrect! Please enter the correct string: Download\n");
   }
-  else if (strcmp(str,"") == 0){}
-  else
-    printf("Incorrect! Please enter the correct string: Download\n");
-}
 }
