@@ -44,7 +44,7 @@ timers_t timer00 =
   .timer_config.counter_dir = TIMER_COUNT_UP, /*!< Counter direction  */
   .timer_config.auto_reload = TIMER_AUTORELOAD_EN,   /*!< Timer auto-reload */
   .timer_config.divider = TIMER_DIVDER,
-  .period = 10, // 60s timer
+  .period = 60, // 60s timer
 };
 
 

@@ -53,47 +53,47 @@ void adc_read_task(void* arg)
   }
 
   vAve /= samples;
-  temperatureAve = ((double)vAve - 500)/10;
+  temperatureAve = ((double)vAve - 500)/10; // Removed an extra 50mV due to noise of the lines
   double tmpMedian = (double)highest - (double)lowest;
   tmpMedian /= 2;
   temperatureMed = ((lowest+tmpMedian) - 500)/10;
-  printf("Median Temp: %.2f*C\n", temperatureMed);
-  printf("Average Temp: %.2f*C\n", temperatureAve);
+  // printf("Median Temp: %.2f*C\n", temperatureMed);
+  // printf("Average Temp: %.2f*C\n", temperatureAve);
   //Save Avg to NVS
-
   save_data((uint32_t)(temperatureAve*100));
-
-  // xQueueSendFromISR(data_queue, &temperatureAve, NULL);
-
 }
+
 static inline bool error_check(int err, char messFail[80], char messSuccess[80])
 {
   printf((err != ESP_OK) ? messFail : messSuccess);
 
   if (err != ESP_OK)
   {
-    printf(messFail);
+    // printf(messFail);
     if (err == ESP_ERR_NVS_NOT_ENOUGH_SPACE)
       nvs_erase_all(my_handle);
-    ESP_ERROR_CHECK(err);
+    // ESP_ERROR_CHECK(err);
     return false;
   }
   else
     return true;
 }
+
 // void save_data(void* arg)
 void save_data(uint32_t Average)
 {
   int err;
   err = nvs_open("storage", NVS_READWRITE, &my_handle);
-  if(error_check(err, "Error (%s) opening NVS handle!\n","Sucess!\n"))
+  if(error_check(err, "Error (%s) opening NVS handle!\n",""))
   {
-    uint32_t currAddr = 0;
+    uint32_t currAddr = 1;
     uint32_t baseAddr = 0;
     char baseStr[32];
     // convert address space to string
     itoa(baseAddr, baseStr, 10);
     err = nvs_get_u32(my_handle,baseStr, &currAddr);
+    // printf("Base Address: %d\n",baseAddr);
+    // printf("Current Address: %d\n",currAddr);
     error_check(err, "Current Address Retrival Failed!\n","");
 
     if (currAddr < MAX_ADDRESS)
@@ -103,15 +103,16 @@ void save_data(uint32_t Average)
 
     char memStr[32];
     itoa(currAddr, memStr, 10);
+    // printf("Current Address: %d\n",currAddr);
 
     err = nvs_set_u32(my_handle,baseStr, currAddr);
-    error_check(err, "Memory Location Failed!\n","Memory Location Set!\n");
-    printf("Current Address: %d\n",currAddr);
+    error_check(err, "Memory Location Failed!\n","");
+
     uint32_t timeCode = currAddr << 16;
     uint32_t data = timeCode + Average;
 
     err = nvs_set_u32(my_handle,memStr, data);
-    error_check(err, "Data Failed!\n","Data Set!\n");
+    error_check(err, "Data Failed!\n","");
 
     // uint32_t temp = data;
     // uint32_t hour = (temp >> 16)/60;//(tempAddr/60) << 24;
@@ -121,10 +122,10 @@ void save_data(uint32_t Average)
     // printf("Hour: %d, Minute: %d, Average Temperature: %d\n", hour, minute, Average);
     // printf("Location of Memory: %d\n", currAddr);
 
-    printf("Data: %d\n", data);
-    printf("Committing updates in NVS ... ");
+    // printf("Data: %d\n", data);
+    // printf("Committing updates in NVS ... ");
     err = nvs_commit(my_handle);
-    printf((err != ESP_OK) ? "Failed!\n" : "Done\n");
+    printf((err != ESP_OK) ? "Failed!\n" : "");
     // Close
     nvs_close(my_handle);
     // display_data();
@@ -137,49 +138,60 @@ void display_data()
   {
   char str [80] = "";
   char desired [9] = "Download";
-  printf("Please enter: 'Download': ");
-  scanf("%s",str); //If you'd like to see the last 12 hours of data,  
+  printf("To see some data, please enter: 'Download': ");
+  scanf("%s",str); //If you'd like to see the last 12 hours of data, 
+  printf("%s\n",str); 
+  vTaskDelay(10000 / portTICK_RATE_MS);
   printf("%s\n",str);
-  vTaskDelay(5000 / portTICK_RATE_MS);
-
-  if (strcmp(str,desired) == 0)
+  if ((strcmp(str,desired) == 0) || (strcmp(str,"Download\n") == 0) || (strcmp(str,"Download\r\n") == 0))
   {
     printf("SUccess!!!\n");
     int err;
     err = nvs_open("storage", NVS_READWRITE, &my_handle);
-    if(error_check(err, "Error (%s) opening NVS handle!\n","Sucess!\n"))
+    if(error_check(err, "Error (%s) opening NVS handle!\n","Download Sucess!\n"))
     {
-      // get the maxiumum address value for the print out of the data
-      uint32_t baseAddr = 0;
-      char baseStr[32];
-      itoa(baseAddr, baseStr, 10);
       uint32_t tempOut;
+      // get the maxiumum address value for the print out of the data
+      // uint32_t baseAddr = 0;
+      // char baseStr[32];
+      // itoa(baseAddr, baseStr, 10);
+      // err = nvs_get_u32(my_handle,baseStr,&tempOut);
+      // if(error_check(err, "Data Retrieval Failed!\n",""))
+      // {}
       // uint32_t currAddr = 1;
       char currAddrStr[32];
       uint32_t hour;
       uint32_t minute;
       uint32_t Average;
 
-      for (uint32_t i = 1; i < MAX_ADDRESS;i++)
+      for (uint32_t i = 0; i < MAX_ADDRESS;i++)
       {
         itoa(i, currAddrStr, 10);
         err = nvs_get_u32(my_handle,currAddrStr,&tempOut);
-        if(error_check(err, "Data Retrieval Failed!\n",""))
+        uint32_t temp = tempOut;
+        hour = (temp >> 16)/60;//(tempAddr/60) << 24;
+        temp = tempOut;
+        minute = (temp >> 16)%60;
+        printf("Hour: %d, Minute: %d, ", hour, minute);
+
+        if(error_check(err, "",""))
         {
-          uint32_t temp = tempOut;
-          hour = (temp >> 16)/60;//(tempAddr/60) << 24;
-          temp = tempOut;
-          minute = (temp >> 16)%60;
           Average = tempOut & 0b1111111111111111;
           double avg = ((double)Average)/100;
-          printf("Hour: %d, Minute: %d, Average Temperature: %.2f*C\n", hour, minute, avg);
+          printf("Average Temperature: %.2f*C\n",avg);
         }
+        else
+        {
+          printf("No data or Failed\n");
+          i = MAX_ADDRESS;
+        }
+
       }
       nvs_close(my_handle);
     }
   }
   else if (strcmp(str,"") == 0){}
   else
-    printf("Please enter the correct string: Download\n");
+    printf("Incorrect! Please enter the correct string: Download\n");
 }
 }
