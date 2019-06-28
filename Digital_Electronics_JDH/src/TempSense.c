@@ -106,7 +106,7 @@ void save_data(uint32_t Average)
 
     err = nvs_set_u32(my_handle,baseStr, currAddr);
     error_check(err, "Memory Location Failed!\n","Memory Location Set!\n");
-
+    printf("Current Address: %d\n",currAddr);
     uint32_t timeCode = currAddr << 16;
     uint32_t data = timeCode + Average;
 
@@ -137,16 +137,16 @@ void display_data()
   {
   char str [80] = "";
   char desired [9] = "Download";
-  printf("Please enter: 'Download': \n");
+  printf("Please enter: 'Download': ");
   scanf("%s",str); //If you'd like to see the last 12 hours of data,  
+  printf("%s\n",str);
   vTaskDelay(5000 / portTICK_RATE_MS);
 
-  printf("%s\n",str);
   if (strcmp(str,desired) == 0)
   {
     printf("SUccess!!!\n");
     int err;
-    err = nvs_open("read", NVS_READONLY, &my_handle);
+    err = nvs_open("storage", NVS_READWRITE, &my_handle);
     if(error_check(err, "Error (%s) opening NVS handle!\n","Sucess!\n"))
     {
       // get the maxiumum address value for the print out of the data
@@ -154,15 +154,15 @@ void display_data()
       char baseStr[32];
       itoa(baseAddr, baseStr, 10);
       uint32_t tempOut;
-      uint32_t currAddr = 1;
+      // uint32_t currAddr = 1;
       char currAddrStr[32];
       uint32_t hour;
       uint32_t minute;
       uint32_t Average;
 
-      for (uint32_t i = 0; i < MAX_ADDRESS;i++)
+      for (uint32_t i = 1; i < MAX_ADDRESS;i++)
       {
-        itoa(currAddr, currAddrStr, 10);
+        itoa(i, currAddrStr, 10);
         err = nvs_get_u32(my_handle,currAddrStr,&tempOut);
         if(error_check(err, "Data Retrieval Failed!\n",""))
         {
@@ -178,5 +178,8 @@ void display_data()
       nvs_close(my_handle);
     }
   }
+  else if (strcmp(str,"") == 0){}
+  else
+    printf("Please enter the correct string: Download\n");
 }
 }
